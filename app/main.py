@@ -315,36 +315,46 @@ def render_manual_input_page(alert_threshold):
 
     if "manual_predictions" not in st.session_state: st.session_state.manual_predictions = []
     if "manual_history"     not in st.session_state: st.session_state.manual_history     = []
+    
+    # Initialize preset values if not exists
+    if "preset_values" not in st.session_state:
+        st.session_state.preset_values = {
+            "air_temp": 300.0,
+            "process_temp": 310.0,
+            "rpm": 1500.0,
+            "torque": 40.0,
+            "wear": 50.0
+        }
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.write("**Input Parameters**")
-        air_temp     = st.number_input(" Air Temperature (K)",    value=300.0, min_value=250.0, max_value=350.0, step=0.1,  key="manual_air_temp")
-        process_temp = st.number_input(" Process Temperature (K)", value=310.0, min_value=250.0, max_value=400.0, step=0.1,  key="manual_process_temp")
-        rpm          = st.number_input(" Rotational Speed (RPM)",  value=1500.0, min_value=1000.0, max_value=3000.0, step=10.0, key="manual_rpm")
+        air_temp     = st.number_input(" Air Temperature (K)",    value=st.session_state.preset_values["air_temp"], min_value=250.0, max_value=350.0, step=0.1, key="manual_air_temp")
+        process_temp = st.number_input(" Process Temperature (K)", value=st.session_state.preset_values["process_temp"], min_value=250.0, max_value=400.0, step=0.1, key="manual_process_temp")
+        rpm          = st.number_input(" Rotational Speed (RPM)",  value=st.session_state.preset_values["rpm"], min_value=1000.0, max_value=3000.0, step=10.0, key="manual_rpm")
 
     with col2:
         st.write("**Advanced Parameters**")
-        torque = st.number_input(" Torque (Nm)",      value=40.0, min_value=0.0,  max_value=100.0, step=0.5, key="manual_torque")
-        wear   = st.number_input(" Tool Wear (min)",  value=50.0, min_value=0.0,  max_value=300.0, step=1.0, key="manual_wear")
+        torque = st.number_input(" Torque (Nm)",      value=st.session_state.preset_values["torque"], min_value=0.0,  max_value=100.0, step=0.5, key="manual_torque")
+        wear   = st.number_input(" Tool Wear (min)",  value=st.session_state.preset_values["wear"], min_value=0.0,  max_value=300.0, step=1.0, key="manual_wear")
 
         st.write("**Quick Presets**")
         cp1, cp2, cp3 = st.columns(3)
         with cp1:
             if st.button(" Normal", key="preset_normal"):
-                st.session_state.update({"manual_air_temp": 300.0, "manual_process_temp": 310.0,
-                                         "manual_rpm": 1500.0, "manual_torque": 40.0, "manual_wear": 50.0})
+                st.session_state.preset_values = {"air_temp": 300.0, "process_temp": 310.0,
+                                                  "rpm": 1500.0, "torque": 40.0, "wear": 50.0}
                 st.rerun()
         with cp2:
             if st.button(" High Stress", key="preset_high"):
-                st.session_state.update({"manual_air_temp": 305.0, "manual_process_temp": 320.0,
-                                         "manual_rpm": 1800.0, "manual_torque": 60.0, "manual_wear": 150.0})
+                st.session_state.preset_values = {"air_temp": 305.0, "process_temp": 320.0,
+                                                  "rpm": 1800.0, "torque": 60.0, "wear": 150.0}
                 st.rerun()
         with cp3:
             if st.button(" Critical", key="preset_critical"):
-                st.session_state.update({"manual_air_temp": 310.0, "manual_process_temp": 330.0,
-                                         "manual_rpm": 2000.0, "manual_torque": 80.0, "manual_wear": 200.0})
+                st.session_state.preset_values = {"air_temp": 310.0, "process_temp": 330.0,
+                                                  "rpm": 2000.0, "torque": 80.0, "wear": 200.0}
                 st.rerun()
 
     st.markdown("---")
