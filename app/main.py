@@ -13,25 +13,28 @@ def cleanup_session_state():
     """Clean up corrupted session state data"""
     required_live_keys = ["timestamp", "result", "probability", "data"]
     required_manual_keys = ["timestamp", "result", "probability", "data", "parameters"]
-    
+
     # Clean live predictions
     if "live_predictions" in st.session_state:
         st.session_state.live_predictions = [
-            p for p in st.session_state.live_predictions 
+            p
+            for p in st.session_state.live_predictions
             if all(k in p for k in required_live_keys)
         ]
-    
+
     # Clean manual predictions
     if "manual_predictions" in st.session_state:
         st.session_state.manual_predictions = [
-            p for p in st.session_state.manual_predictions 
+            p
+            for p in st.session_state.manual_predictions
             if all(k in p for k in required_manual_keys)
         ]
-    
+
     # Clean manual history
     if "manual_history" in st.session_state:
         st.session_state.manual_history = [
-            p for p in st.session_state.manual_history 
+            p
+            for p in st.session_state.manual_history
             if all(k in p for k in required_manual_keys)
         ]
 
@@ -41,25 +44,26 @@ def main():
         page_title="Machine Failure Prediction System",
         page_icon="",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="expanded",
     )
 
     # Clean up corrupted session state
     cleanup_session_state()
 
-    st.markdown("""
+    st.markdown(
+        """
     <style>
         .main-header { text-align: center; padding: 2rem 0; }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # ── SIDEBAR ──────────────────────────────────────────────────────────────
     st.sidebar.title("🎛️ Control Panel")
 
     selected_mode = st.sidebar.radio(
-        "Select Mode",
-        ["Live Streaming", "Manual Input"],
-        index=0
+        "Select Mode", ["Live Streaming", "Manual Input"], index=0
     )
 
     st.sidebar.markdown("---")
@@ -69,19 +73,25 @@ def main():
     streaming_active = False
     alert_threshold = 0.7
     stream_interval = 2
-    
+
     if selected_mode == "Live Streaming":
         st.sidebar.subheader("Streaming Controls")
-        streaming_active  = st.sidebar.checkbox(" Start Live Streaming", value=False, key="live_streaming")
-        alert_threshold   = st.sidebar.slider(" Alert Threshold", 0.0, 1.0, 0.7, 0.05, key="live_alert_threshold")
-        stream_interval   = st.sidebar.slider(" Update Interval (s)", 1, 10, 2, key="live_stream_interval")
+        streaming_active = st.sidebar.checkbox(
+            " Start Live Streaming", value=False, key="live_streaming"
+        )
+        alert_threshold = st.sidebar.slider(
+            " Alert Threshold", 0.0, 1.0, 0.7, 0.05, key="live_alert_threshold"
+        )
+        stream_interval = st.sidebar.slider(
+            " Update Interval (s)", 1, 10, 2, key="live_stream_interval"
+        )
 
         st.sidebar.markdown("---")
         st.sidebar.subheader(" Machine Connection")
         machine_status = st.sidebar.selectbox(
             "Select Machine",
             ["Machine-001", "Machine-002", "Machine-003", "Simulator"],
-            key="machine_select"
+            key="machine_select",
         )
         if machine_status == "Simulator":
             st.sidebar.info(" Using data simulator")
@@ -98,12 +108,14 @@ def main():
 
     else:  # Manual Input
         st.sidebar.subheader("Manual Input Controls")
-        alert_threshold = st.sidebar.slider(" Alert Threshold", 0.0, 1.0, 0.7, 0.05, key="manual_alert_threshold")
+        alert_threshold = st.sidebar.slider(
+            " Alert Threshold", 0.0, 1.0, 0.7, 0.05, key="manual_alert_threshold"
+        )
 
         st.sidebar.markdown("---")
         if st.sidebar.button("🗑️ Clear History", key="clear_history_sidebar"):
             st.session_state.manual_predictions = []
-            st.session_state.manual_history     = []
+            st.session_state.manual_history = []
             st.rerun()
 
     # ── MAIN CONTENT ─────────────────────────────────────────────────────────
@@ -127,22 +139,30 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
     st.markdown("---")
 
     # Init session state
-    if "live_predictions"   not in st.session_state: st.session_state.live_predictions   = []
-    if "live_failure_count" not in st.session_state: st.session_state.live_failure_count = 0
-    if "live_total_count"   not in st.session_state: st.session_state.live_total_count   = 0
+    if "live_predictions" not in st.session_state:
+        st.session_state.live_predictions = []
+    if "live_failure_count" not in st.session_state:
+        st.session_state.live_failure_count = 0
+    if "live_total_count" not in st.session_state:
+        st.session_state.live_total_count = 0
 
     # Live data stream
     if streaming_active:
         placeholder = st.empty()
 
-        while True:   # Streamlit re-runs stop this loop when checkbox unchecked
+        while True:  # Streamlit re-runs stop this loop when checkbox unchecked
             data = generate_realistic_data()
             result, probability = predict(data)
             timestamp = datetime.now()
 
             # Validate prediction results before adding to session state
             if result is not None and probability is not None:
-                entry = {"timestamp": timestamp, "result": result, "probability": probability, "data": data}
+                entry = {
+                    "timestamp": timestamp,
+                    "result": result,
+                    "probability": probability,
+                    "data": data,
+                }
                 st.session_state.live_predictions.append(entry)
                 st.session_state.live_total_count += 1
                 if result == 1:
@@ -156,10 +176,13 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
                 # Key metrics - Update in real-time
                 col1, col2, col3, col4 = st.columns(4)
                 col1.metric(" Total Readings", st.session_state.live_total_count)
-                col2.metric(" Failures",       st.session_state.live_failure_count)
+                col2.metric(" Failures", st.session_state.live_failure_count)
 
                 if st.session_state.live_total_count > 0:
-                    failure_rate = (st.session_state.live_failure_count / st.session_state.live_total_count) * 100
+                    failure_rate = (
+                        st.session_state.live_failure_count
+                        / st.session_state.live_total_count
+                    ) * 100
                     col3.metric(" Failure Rate", f"{failure_rate:.1f}%")
                 else:
                     col3.metric(" Failure Rate", "0.0%")
@@ -176,11 +199,11 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
 
                 # Current metrics display
                 c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric(" Air Temp",    f"{data[0]:.1f}K")
+                c1.metric(" Air Temp", f"{data[0]:.1f}K")
                 c2.metric(" Process Temp", f"{data[1]:.1f}K")
-                c3.metric(" RPM",          f"{data[2]:.0f}")
-                c4.metric(" Torque",        f"{data[3]:.1f}Nm")
-                c5.metric(" Wear",          f"{data[4]:.1f}min")
+                c3.metric(" RPM", f"{data[2]:.0f}")
+                c4.metric(" Torque", f"{data[3]:.1f}Nm")
+                c5.metric(" Wear", f"{data[4]:.1f}min")
 
                 if probability >= alert_threshold:
                     st.error(f" CRITICAL ALERT: Failure probability {probability:.1%}!")
@@ -198,43 +221,67 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
                     import plotly.graph_objects as go
 
                     # Filter out any entries without required keys
-                    valid_predictions = [p for p in st.session_state.live_predictions if all(k in p for k in ["timestamp", "probability"])]
-                    
+                    valid_predictions = [
+                        p
+                        for p in st.session_state.live_predictions
+                        if all(k in p for k in ["timestamp", "probability"])
+                    ]
+
                     if valid_predictions:
                         df = pd.DataFrame(valid_predictions)
                         col1, col2 = st.columns(2)
 
                         with col1:
                             fig_prob = go.Figure()
-                            fig_prob.add_trace(go.Scatter(
-                                x=df["timestamp"], y=df["probability"],
-                                mode="lines+markers", name="Failure Probability",
-                                line=dict(color="red", width=2)
-                            ))
+                            fig_prob.add_trace(
+                                go.Scatter(
+                                    x=df["timestamp"],
+                                    y=df["probability"],
+                                    mode="lines+markers",
+                                    name="Failure Probability",
+                                    line=dict(color="red", width=2),
+                                )
+                            )
                             fig_prob.add_hline(
-                                y=alert_threshold, line_dash="dash", line_color="orange",
-                                annotation_text="Alert Threshold"
+                                y=alert_threshold,
+                                line_dash="dash",
+                                line_color="orange",
+                                annotation_text="Alert Threshold",
                             )
                             fig_prob.update_layout(
                                 title=" Real-time Failure Probability",
-                                xaxis_title="Time", yaxis_title="Probability", height=300
+                                xaxis_title="Time",
+                                yaxis_title="Probability",
+                                height=300,
                             )
-                            st.plotly_chart(fig_prob, width='stretch')
+                            st.plotly_chart(fig_prob, width="stretch")
 
                         with col2:
                             st.subheader(" Recent Events")
-                            recent = df.tail(50)[["timestamp", "probability"]].copy()  # Show more events
+                            recent = df.tail(50)[
+                                ["timestamp", "probability"]
+                            ].copy()  # Show more events
                             recent["Risk Level"] = recent["probability"].apply(
-                                lambda x: " Critical" if x >= alert_threshold else " Medium" if x >= 0.3 else " Low"
+                                lambda x: (
+                                    " Critical"
+                                    if x >= alert_threshold
+                                    else " Medium" if x >= 0.3 else " Low"
+                                )
                             )
-                            recent["Time"]        = recent["timestamp"].dt.strftime("%H:%M:%S")
-                            recent["Probability"] = recent["probability"].apply(lambda x: f"{x:.1%}")
-                            
+                            recent["Time"] = recent["timestamp"].dt.strftime("%H:%M:%S")
+                            recent["Probability"] = recent["probability"].apply(
+                                lambda x: f"{x:.1%}"
+                            )
+
                             # Use dataframe with height parameter for scrolling
-                            st.dataframe(recent[["Time", "Probability", "Risk Level"]], 
-                                        width='stretch', height=300)
+                            st.dataframe(
+                                recent[["Time", "Probability", "Risk Level"]],
+                                width="stretch",
+                                height=300,
+                            )
 
             import time
+
             time.sleep(stream_interval)
 
     # Show static metrics when streaming is stopped
@@ -242,10 +289,12 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
         col1.metric(" Total Readings", st.session_state.live_total_count)
-        col2.metric(" Failures",       st.session_state.live_failure_count)
+        col2.metric(" Failures", st.session_state.live_failure_count)
 
         if st.session_state.live_total_count > 0:
-            failure_rate = (st.session_state.live_failure_count / st.session_state.live_total_count) * 100
+            failure_rate = (
+                st.session_state.live_failure_count / st.session_state.live_total_count
+            ) * 100
             col3.metric(" Failure Rate", f"{failure_rate:.1f}%")
         else:
             col3.metric(" Failure Rate", "0.0%")
@@ -263,8 +312,12 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
         # Show analytics when streaming is stopped (static view)
         if st.session_state.live_predictions:
             # Filter out any entries without required keys
-            valid_predictions = [p for p in st.session_state.live_predictions if all(k in p for k in ["timestamp", "probability"])]
-            
+            valid_predictions = [
+                p
+                for p in st.session_state.live_predictions
+                if all(k in p for k in ["timestamp", "probability"])
+            ]
+
             if valid_predictions:
                 st.markdown("---")
                 st.subheader("Live Analytics")
@@ -277,33 +330,52 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
 
                 with col1:
                     fig_prob = go.Figure()
-                    fig_prob.add_trace(go.Scatter(
-                        x=df["timestamp"], y=df["probability"],
-                        mode="lines+markers", name="Failure Probability",
-                        line=dict(color="red", width=2)
-                    ))
+                    fig_prob.add_trace(
+                        go.Scatter(
+                            x=df["timestamp"],
+                            y=df["probability"],
+                            mode="lines+markers",
+                            name="Failure Probability",
+                            line=dict(color="red", width=2),
+                        )
+                    )
                     fig_prob.add_hline(
-                        y=alert_threshold, line_dash="dash", line_color="orange",
-                        annotation_text="Alert Threshold"
+                        y=alert_threshold,
+                        line_dash="dash",
+                        line_color="orange",
+                        annotation_text="Alert Threshold",
                     )
                     fig_prob.update_layout(
                         title="Real-time Failure Probability",
-                        xaxis_title="Time", yaxis_title="Probability", height=300
+                        xaxis_title="Time",
+                        yaxis_title="Probability",
+                        height=300,
                     )
-                    st.plotly_chart(fig_prob, width='stretch')
+                    st.plotly_chart(fig_prob, width="stretch")
 
                 with col2:
                     st.subheader(" Recent Events")
-                    recent = df.tail(50)[["timestamp", "probability"]].copy()  # Show more events
+                    recent = df.tail(50)[
+                        ["timestamp", "probability"]
+                    ].copy()  # Show more events
                     recent["Risk Level"] = recent["probability"].apply(
-                        lambda x: " Critical" if x >= alert_threshold else " Medium" if x >= 0.3 else " Low"
+                        lambda x: (
+                            " Critical"
+                            if x >= alert_threshold
+                            else " Medium" if x >= 0.3 else " Low"
+                        )
                     )
-                    recent["Time"]        = recent["timestamp"].dt.strftime("%H:%M:%S")
-                    recent["Probability"] = recent["probability"].apply(lambda x: f"{x:.1%}")
-                    
+                    recent["Time"] = recent["timestamp"].dt.strftime("%H:%M:%S")
+                    recent["Probability"] = recent["probability"].apply(
+                        lambda x: f"{x:.1%}"
+                    )
+
                     # Use dataframe with height parameter for scrolling
-                    st.dataframe(recent[["Time", "Probability", "Risk Level"]], 
-                                width='stretch', height=300)
+                    st.dataframe(
+                        recent[["Time", "Probability", "Risk Level"]],
+                        width="stretch",
+                        height=300,
+                    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -313,9 +385,11 @@ def render_manual_input_page(alert_threshold):
     st.subheader("Manual Machine Prediction")
     st.markdown("---")
 
-    if "manual_predictions" not in st.session_state: st.session_state.manual_predictions = []
-    if "manual_history"     not in st.session_state: st.session_state.manual_history     = []
-    
+    if "manual_predictions" not in st.session_state:
+        st.session_state.manual_predictions = []
+    if "manual_history" not in st.session_state:
+        st.session_state.manual_history = []
+
     # Initialize preset values if not exists
     if "preset_values" not in st.session_state:
         st.session_state.preset_values = {
@@ -323,53 +397,113 @@ def render_manual_input_page(alert_threshold):
             "process_temp": 310.0,
             "rpm": 1500.0,
             "torque": 40.0,
-            "wear": 50.0
+            "wear": 50.0,
         }
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.write("**Input Parameters**")
-        air_temp     = st.number_input(" Air Temperature (K)",    value=st.session_state.preset_values["air_temp"], min_value=250.0, max_value=350.0, step=0.1, key="manual_air_temp")
-        process_temp = st.number_input(" Process Temperature (K)", value=st.session_state.preset_values["process_temp"], min_value=250.0, max_value=400.0, step=0.1, key="manual_process_temp")
-        rpm          = st.number_input(" Rotational Speed (RPM)",  value=st.session_state.preset_values["rpm"], min_value=1000.0, max_value=3000.0, step=10.0, key="manual_rpm")
+        air_temp = st.number_input(
+            " Air Temperature (K)",
+            value=st.session_state.preset_values["air_temp"],
+            min_value=250.0,
+            max_value=350.0,
+            step=0.1,
+            key="manual_air_temp",
+        )
+        process_temp = st.number_input(
+            " Process Temperature (K)",
+            value=st.session_state.preset_values["process_temp"],
+            min_value=250.0,
+            max_value=400.0,
+            step=0.1,
+            key="manual_process_temp",
+        )
+        rpm = st.number_input(
+            " Rotational Speed (RPM)",
+            value=st.session_state.preset_values["rpm"],
+            min_value=1000.0,
+            max_value=3000.0,
+            step=10.0,
+            key="manual_rpm",
+        )
 
     with col2:
         st.write("**Advanced Parameters**")
-        torque = st.number_input(" Torque (Nm)",      value=st.session_state.preset_values["torque"], min_value=0.0,  max_value=100.0, step=0.5, key="manual_torque")
-        wear   = st.number_input(" Tool Wear (min)",  value=st.session_state.preset_values["wear"], min_value=0.0,  max_value=300.0, step=1.0, key="manual_wear")
+        torque = st.number_input(
+            " Torque (Nm)",
+            value=st.session_state.preset_values["torque"],
+            min_value=0.0,
+            max_value=100.0,
+            step=0.5,
+            key="manual_torque",
+        )
+        wear = st.number_input(
+            " Tool Wear (min)",
+            value=st.session_state.preset_values["wear"],
+            min_value=0.0,
+            max_value=300.0,
+            step=1.0,
+            key="manual_wear",
+        )
 
         st.write("**Quick Presets**")
         cp1, cp2, cp3 = st.columns(3)
         with cp1:
             if st.button(" Normal", key="preset_normal"):
-                st.session_state.preset_values = {"air_temp": 300.0, "process_temp": 310.0,
-                                                  "rpm": 1500.0, "torque": 40.0, "wear": 50.0}
+                st.session_state.preset_values = {
+                    "air_temp": 300.0,
+                    "process_temp": 310.0,
+                    "rpm": 1500.0,
+                    "torque": 40.0,
+                    "wear": 50.0,
+                }
                 st.rerun()
         with cp2:
             if st.button(" High Stress", key="preset_high"):
-                st.session_state.preset_values = {"air_temp": 305.0, "process_temp": 320.0,
-                                                  "rpm": 1800.0, "torque": 60.0, "wear": 150.0}
+                st.session_state.preset_values = {
+                    "air_temp": 305.0,
+                    "process_temp": 320.0,
+                    "rpm": 1800.0,
+                    "torque": 60.0,
+                    "wear": 150.0,
+                }
                 st.rerun()
         with cp3:
             if st.button(" Critical", key="preset_critical"):
-                st.session_state.preset_values = {"air_temp": 310.0, "process_temp": 330.0,
-                                                  "rpm": 2000.0, "torque": 80.0, "wear": 200.0}
+                st.session_state.preset_values = {
+                    "air_temp": 310.0,
+                    "process_temp": 330.0,
+                    "rpm": 2000.0,
+                    "torque": 80.0,
+                    "wear": 200.0,
+                }
                 st.rerun()
 
     st.markdown("---")
 
-    if st.button(" Predict Failure Risk", type="primary", width='stretch', key="predict_button"):
-        data   = [air_temp, process_temp, rpm, torque, wear]
+    if st.button(
+        " Predict Failure Risk", type="primary", width="stretch", key="predict_button"
+    ):
+        data = [air_temp, process_temp, rpm, torque, wear]
         result, probability = predict(data)
         timestamp = datetime.now()
 
         # Validate prediction results before adding to session state
         if result is not None and probability is not None:
             entry = {
-                "timestamp": timestamp, "result": result, "probability": probability, "data": data,
-                "parameters": {"air_temp": air_temp, "process_temp": process_temp,
-                               "rpm": rpm, "torque": torque, "wear": wear}
+                "timestamp": timestamp,
+                "result": result,
+                "probability": probability,
+                "data": data,
+                "parameters": {
+                    "air_temp": air_temp,
+                    "process_temp": process_temp,
+                    "rpm": rpm,
+                    "torque": torque,
+                    "wear": wear,
+                },
             }
             st.session_state.manual_predictions.append(entry)
             st.session_state.manual_history.append(entry)
@@ -379,7 +513,9 @@ def render_manual_input_page(alert_threshold):
             st.error(" Prediction failed. Please try again.")
 
     if st.session_state.manual_predictions:
-        render_prediction_result(st.session_state.manual_predictions[-1], alert_threshold)
+        render_prediction_result(
+            st.session_state.manual_predictions[-1], alert_threshold
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -390,47 +526,51 @@ def render_prediction_result(prediction, alert_threshold):
     import pandas as pd
 
     # Validate prediction has required keys
-    if not all(k in prediction for k in ["result", "probability", "parameters", "data"]):
+    if not all(
+        k in prediction for k in ["result", "probability", "parameters", "data"]
+    ):
         st.error(" Invalid prediction data. Please try again.")
         return
 
     st.markdown("---")
     st.subheader(" Prediction Result")
 
-    result      = prediction["result"]
+    result = prediction["result"]
     probability = prediction["probability"]
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=probability * 100,
-            domain={"x": [0, 1], "y": [0, 1]},
-            title={"text": "Failure Risk (%)"},
-            gauge={
-                "axis": {"range": [None, 100]},
-                "bar":  {"color": "darkblue"},
-                "steps": [
-                    {"range": [0,  30], "color": "lightgray"},
-                    {"range": [30, 70], "color": "yellow"},
-                    {"range": [70, 100], "color": "red"},
-                ],
-                "threshold": {
-                    "line": {"color": "red", "width": 4},
-                    "thickness": 0.75,
-                    "value": alert_threshold * 100
-                }
-            }
-        ))
+        fig_gauge = go.Figure(
+            go.Indicator(
+                mode="gauge+number+delta",
+                value=probability * 100,
+                domain={"x": [0, 1], "y": [0, 1]},
+                title={"text": "Failure Risk (%)"},
+                gauge={
+                    "axis": {"range": [None, 100]},
+                    "bar": {"color": "darkblue"},
+                    "steps": [
+                        {"range": [0, 30], "color": "lightgray"},
+                        {"range": [30, 70], "color": "yellow"},
+                        {"range": [70, 100], "color": "red"},
+                    ],
+                    "threshold": {
+                        "line": {"color": "red", "width": 4},
+                        "thickness": 0.75,
+                        "value": alert_threshold * 100,
+                    },
+                },
+            )
+        )
         fig_gauge.update_layout(height=300)
-        st.plotly_chart(fig_gauge, width='stretch')
+        st.plotly_chart(fig_gauge, width="stretch")
 
     with col2:
         risk_level = get_risk_level(probability)
         st.metric(" Risk Level", risk_level["label"])
         st.metric(" Confidence", f"{probability:.1%}")
-        st.metric(" Status",     "FAILURE" if result == 1 else "NORMAL")
+        st.metric(" Status", "FAILURE" if result == 1 else "NORMAL")
 
         if probability >= alert_threshold:
             st.error(" **IMMEDIATE ACTION REQUIRED**")
@@ -457,10 +597,14 @@ def render_prediction_result(prediction, alert_threshold):
 
 
 def get_risk_level(probability):
-    if probability >= 0.8:   return {"label": "CRITICAL", "color": "red"}
-    elif probability >= 0.6: return {"label": "HIGH",     "color": "orange"}
-    elif probability >= 0.3: return {"label": "MEDIUM",   "color": "yellow"}
-    else:                    return {"label": "LOW",       "color": "green"}
+    if probability >= 0.8:
+        return {"label": "CRITICAL", "color": "red"}
+    elif probability >= 0.6:
+        return {"label": "HIGH", "color": "orange"}
+    elif probability >= 0.3:
+        return {"label": "MEDIUM", "color": "yellow"}
+    else:
+        return {"label": "LOW", "color": "green"}
 
 
 if __name__ == "__main__":
