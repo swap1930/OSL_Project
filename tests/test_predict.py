@@ -1,9 +1,11 @@
-import pytest
-import numpy as np
 import os
 import tempfile
-from unittest.mock import patch, MagicMock
-from src.predict import predict, generate_realistic_data, explain_prediction
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
+
+from src.predict import explain_prediction, generate_realistic_data, predict
 
 
 @pytest.fixture

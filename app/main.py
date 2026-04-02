@@ -1,12 +1,13 @@
-import streamlit as st
-import sys
 import os
+import sys
 from datetime import datetime
+
+import streamlit as st
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.predict import predict, generate_realistic_data, explain_prediction
-from src.auto_retrain import log_prediction, get_retraining_status
+from src.auto_retrain import get_retraining_status, log_prediction
+from src.predict import explain_prediction, generate_realistic_data, predict
 
 
 def cleanup_session_state():
@@ -522,8 +523,8 @@ def render_manual_input_page(alert_threshold):
 # Prediction result card
 # ─────────────────────────────────────────────────────────────────────────────
 def render_prediction_result(prediction, alert_threshold):
-    import plotly.graph_objects as go
     import pandas as pd
+    import plotly.graph_objects as go
 
     # Validate prediction has required keys
     if not all(

@@ -1,6 +1,7 @@
-from sklearn.ensemble import RandomForestClassifier
-import joblib
 import os
+
+import joblib
+from sklearn.ensemble import RandomForestClassifier
 
 
 def train(X, y):

@@ -1,7 +1,8 @@
-from sklearn.preprocessing import StandardScaler
-import pandas as pd
-import joblib
 import os
+
+import joblib
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 
 def preprocess(df):

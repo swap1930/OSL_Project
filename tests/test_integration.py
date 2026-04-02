@@ -1,12 +1,14 @@
-import pytest
-import pandas as pd
-import numpy as np
 import os
 import tempfile
 from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from src.predict import generate_realistic_data, predict
 from src.preprocessing import preprocess
 from src.train_model import train
-from src.predict import predict, generate_realistic_data
 
 
 @pytest.mark.integration

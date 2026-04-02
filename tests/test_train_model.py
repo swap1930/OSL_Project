@@ -1,8 +1,10 @@
-import pytest
-import numpy as np
 import os
-import tempfile
 import shutil
+import tempfile
+
+import numpy as np
+import pytest
+
 from src.train_model import train
 
 

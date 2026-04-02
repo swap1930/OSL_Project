@@ -1,8 +1,9 @@
+import os
+
 import joblib
 import numpy as np
-import os
-import shap
 import pandas as pd
+import shap
 
 # Get absolute paths to model files
 model_dir = os.path.join(
@@ -77,23 +78,21 @@ def explain_prediction(data):
 
 def generate_realistic_data():
     """Generate realistic machine data with some patterns"""
-    import random
-
     # Base values with some randomness
-    air_temp = random.uniform(298, 305)  # K
-    process_temp = random.uniform(308, 315)  # K (always higher than air)
-    rpm = random.uniform(1400, 1600)  # rpm
-    torque = random.uniform(30, 60)  # Nm
-    wear = random.uniform(0, 200)  # min
+    air_temp = np.random.uniform(298, 305)  # K
+    process_temp = np.random.uniform(308, 315)  # K (always higher than air)
+    rpm = np.random.uniform(1400, 1600)  # rpm
+    torque = np.random.uniform(30, 60)  # Nm
+    wear = np.random.uniform(0, 200)  # min
 
     # Add some correlation between features
     if rpm > 1550:  # High RPM might increase temperature
-        air_temp += random.uniform(0, 3)
-        process_temp += random.uniform(0, 2)
+        air_temp += np.random.uniform(0, 3)
+        process_temp += np.random.uniform(0, 2)
 
     if torque > 50:  # High torque might increase temperature and wear
-        air_temp += random.uniform(0, 2)
-        process_temp += random.uniform(0, 1)
-        wear += random.uniform(0, 10)
+        air_temp += np.random.uniform(0, 2)
+        process_temp += np.random.uniform(0, 1)
+        wear += np.random.uniform(0, 10)
 
     return [air_temp, process_temp, rpm, torque, wear]
