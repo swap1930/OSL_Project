@@ -9,3 +9,8 @@ seaborn
 plotly
 shap
 requests
+<<<<<<< HEAD
+=======
+openai
+python-dotenv
+>>>>>>> ac5c459 (Hugging face api integrated here. also with .env file.)
