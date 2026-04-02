@@ -12,11 +12,11 @@ def main():
     X, y = preprocess(df)
 
     # Train the model
-    model = train(X, y)
+    train(X, y)
 
     print("Model training completed successfully!")
-    print(f"Model saved to model/model.pkl")
-    print(f"Scaler saved to model/scaler.pkl")
+    print("Model saved to model/model.pkl")
+    print("Scaler saved to model/scaler.pkl")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 import os
-import shutil
 import tempfile
 
 import numpy as np
@@ -44,7 +43,7 @@ def test_train_model_saving():
         train_module.os.path.dirname = lambda x: temp_dir
 
         try:
-            model = train(X, y)
+            train(X, y)  # Model is saved during training
 
             # Check that model file was created
             model_path = os.path.join(temp_dir, "model", "model.pkl")

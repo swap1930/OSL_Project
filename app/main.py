@@ -6,8 +6,8 @@ import streamlit as st
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.auto_retrain import get_retraining_status, log_prediction
-from src.predict import explain_prediction, generate_realistic_data, predict
+from src.auto_retrain import log_prediction
+from src.predict import generate_realistic_data, predict
 
 
 def cleanup_session_state():
@@ -135,17 +135,180 @@ def main():
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE: Live Streaming
 # ─────────────────────────────────────────────────────────────────────────────
-def render_live_streaming_page(streaming_active, alert_threshold, stream_interval):
-    st.subheader("Live Machine Monitoring")
-    st.markdown("---")
-
-    # Init session state
+def _initialize_live_session_state():
+    """Initialize session state for live streaming"""
     if "live_predictions" not in st.session_state:
         st.session_state.live_predictions = []
     if "live_failure_count" not in st.session_state:
         st.session_state.live_failure_count = 0
     if "live_total_count" not in st.session_state:
         st.session_state.live_total_count = 0
+
+
+def _update_live_predictions(data, result, probability, timestamp):
+    """Update session state with new prediction data"""
+    if result is not None and probability is not None:
+        entry = {
+            "timestamp": timestamp,
+            "result": result,
+            "probability": probability,
+            "data": data,
+        }
+        st.session_state.live_predictions.append(entry)
+        st.session_state.live_total_count += 1
+        if result == 1:
+            st.session_state.live_failure_count += 1
+        if len(st.session_state.live_predictions) > 100:
+            st.session_state.live_predictions.pop(0)
+        if st.session_state.live_total_count % 20 == 0:
+            log_prediction(data, result, probability, timestamp)
+
+
+def _render_live_metrics(data, result, probability, alert_threshold):
+    """Render key metrics for live streaming"""
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(" Total Readings", st.session_state.live_total_count)
+    col2.metric(" Failures", st.session_state.live_failure_count)
+
+    if st.session_state.live_total_count > 0:
+        failure_rate = (
+            st.session_state.live_failure_count
+            / st.session_state.live_total_count
+        ) * 100
+        col3.metric(" Failure Rate", f"{failure_rate:.1f}%")
+    else:
+        col3.metric(" Failure Rate", "0.0%")
+
+    if st.session_state.live_predictions:
+        latest_entry = st.session_state.live_predictions[-1]
+        if "probability" in latest_entry:
+            latest_prob = latest_entry["probability"]
+            col4.metric(" Current Risk", f"{latest_prob:.1%}")
+        else:
+            col4.metric(" Current Risk", "N/A")
+    else:
+        col4.metric(" Current Risk", "0.0%")
+
+    # Current metrics display
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric(" Air Temp", f"{data[0]:.1f}K")
+    c2.metric(" Process Temp", f"{data[1]:.1f}K")
+    c3.metric(" RPM", f"{data[2]:.0f}")
+    c4.metric(" Torque", f"{data[3]:.1f}Nm")
+    c5.metric(" Wear", f"{data[4]:.1f}min")
+
+    if probability >= alert_threshold:
+        st.error(f" CRITICAL ALERT: Failure probability {probability:.1%}!")
+    elif result == 1:
+        st.warning(" Machine Failure Predicted!")
+    else:
+        st.success(" Machine Operating Normally")
+
+
+def _render_live_analytics(alert_threshold):
+    """Render live analytics charts"""
+    if not st.session_state.live_predictions:
+        return
+        
+    st.markdown("---")
+    st.subheader(" Live Analytics")
+
+    import pandas as pd
+    import plotly.graph_objects as go
+
+    # Filter out any entries without required keys
+    valid_predictions = [
+        p
+        for p in st.session_state.live_predictions
+        if all(k in p for k in ["timestamp", "probability"])
+    ]
+
+    if valid_predictions:
+        df = pd.DataFrame(valid_predictions)
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig_prob = go.Figure()
+            fig_prob.add_trace(
+                go.Scatter(
+                    x=df["timestamp"],
+                    y=df["probability"],
+                    mode="lines+markers",
+                    name="Failure Probability",
+                    line=dict(color="red", width=2),
+                )
+            )
+            fig_prob.add_hline(
+                y=alert_threshold,
+                line_dash="dash",
+                line_color="orange",
+                annotation_text="Alert Threshold",
+            )
+            fig_prob.update_layout(
+                title=" Real-time Failure Probability",
+                xaxis_title="Time",
+                yaxis_title="Probability",
+                height=300,
+            )
+            st.plotly_chart(fig_prob, width="stretch")
+
+        with col2:
+            st.subheader(" Recent Events")
+            recent = df.tail(50)[
+                ["timestamp", "probability"]
+            ].copy()  # Show more events
+            recent["Risk Level"] = recent["probability"].apply(
+                lambda x: (
+                    " Critical"
+                    if x >= alert_threshold
+                    else " Medium" if x >= 0.3 else " Low"
+                )
+            )
+            recent["Time"] = recent["timestamp"].dt.strftime("%H:%M:%S")
+            recent["Probability"] = recent["probability"].apply(
+                lambda x: f"{x:.1%}"
+            )
+
+            # Use dataframe with height parameter for scrolling
+            st.dataframe(
+                recent[["Time", "Probability", "Risk Level"]],
+                width="stretch",
+                height=300,
+            )
+
+
+def _render_static_metrics(alert_threshold):
+    """Render static metrics when streaming is stopped"""
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(" Total Readings", st.session_state.live_total_count)
+    col2.metric(" Failures", st.session_state.live_failure_count)
+
+    if st.session_state.live_total_count > 0:
+        failure_rate = (
+            st.session_state.live_failure_count / st.session_state.live_total_count
+        ) * 100
+        col3.metric(" Failure Rate", f"{failure_rate:.1f}%")
+    else:
+        col3.metric(" Failure Rate", "0.0%")
+
+    if st.session_state.live_predictions:
+        latest_entry = st.session_state.live_predictions[-1]
+        if "probability" in latest_entry:
+            latest_prob = latest_entry["probability"]
+            col4.metric(" Current Risk", f"{latest_prob:.1%}")
+        else:
+            col4.metric(" Current Risk", "N/A")
+    else:
+        col4.metric(" Current Risk", "0.0%")
+
+
+def render_live_streaming_page(streaming_active, alert_threshold, stream_interval):
+    """Render live streaming page with machine monitoring"""
+    st.subheader("Live Machine Monitoring")
+    st.markdown("---")
+
+    _initialize_live_session_state()
 
     # Live data stream
     if streaming_active:
@@ -156,160 +319,19 @@ def render_live_streaming_page(streaming_active, alert_threshold, stream_interva
             result, probability = predict(data)
             timestamp = datetime.now()
 
-            # Validate prediction results before adding to session state
-            if result is not None and probability is not None:
-                entry = {
-                    "timestamp": timestamp,
-                    "result": result,
-                    "probability": probability,
-                    "data": data,
-                }
-                st.session_state.live_predictions.append(entry)
-                st.session_state.live_total_count += 1
-                if result == 1:
-                    st.session_state.live_failure_count += 1
-                if len(st.session_state.live_predictions) > 100:
-                    st.session_state.live_predictions.pop(0)
-                if st.session_state.live_total_count % 20 == 0:
-                    log_prediction(data, result, probability, timestamp)
+            _update_live_predictions(data, result, probability, timestamp)
 
             with placeholder.container():
-                # Key metrics - Update in real-time
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric(" Total Readings", st.session_state.live_total_count)
-                col2.metric(" Failures", st.session_state.live_failure_count)
-
-                if st.session_state.live_total_count > 0:
-                    failure_rate = (
-                        st.session_state.live_failure_count
-                        / st.session_state.live_total_count
-                    ) * 100
-                    col3.metric(" Failure Rate", f"{failure_rate:.1f}%")
-                else:
-                    col3.metric(" Failure Rate", "0.0%")
-
-                if st.session_state.live_predictions:
-                    latest_entry = st.session_state.live_predictions[-1]
-                    if "probability" in latest_entry:
-                        latest_prob = latest_entry["probability"]
-                        col4.metric(" Current Risk", f"{latest_prob:.1%}")
-                    else:
-                        col4.metric(" Current Risk", "N/A")
-                else:
-                    col4.metric(" Current Risk", "0.0%")
-
-                # Current metrics display
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric(" Air Temp", f"{data[0]:.1f}K")
-                c2.metric(" Process Temp", f"{data[1]:.1f}K")
-                c3.metric(" RPM", f"{data[2]:.0f}")
-                c4.metric(" Torque", f"{data[3]:.1f}Nm")
-                c5.metric(" Wear", f"{data[4]:.1f}min")
-
-                if probability >= alert_threshold:
-                    st.error(f" CRITICAL ALERT: Failure probability {probability:.1%}!")
-                elif result == 1:
-                    st.warning(" Machine Failure Predicted!")
-                else:
-                    st.success(" Machine Operating Normally")
-
-                # Live Analytics - Update continuously
-                if st.session_state.live_predictions:
-                    st.markdown("---")
-                    st.subheader(" Live Analytics")
-
-                    import pandas as pd
-                    import plotly.graph_objects as go
-
-                    # Filter out any entries without required keys
-                    valid_predictions = [
-                        p
-                        for p in st.session_state.live_predictions
-                        if all(k in p for k in ["timestamp", "probability"])
-                    ]
-
-                    if valid_predictions:
-                        df = pd.DataFrame(valid_predictions)
-                        col1, col2 = st.columns(2)
-
-                        with col1:
-                            fig_prob = go.Figure()
-                            fig_prob.add_trace(
-                                go.Scatter(
-                                    x=df["timestamp"],
-                                    y=df["probability"],
-                                    mode="lines+markers",
-                                    name="Failure Probability",
-                                    line=dict(color="red", width=2),
-                                )
-                            )
-                            fig_prob.add_hline(
-                                y=alert_threshold,
-                                line_dash="dash",
-                                line_color="orange",
-                                annotation_text="Alert Threshold",
-                            )
-                            fig_prob.update_layout(
-                                title=" Real-time Failure Probability",
-                                xaxis_title="Time",
-                                yaxis_title="Probability",
-                                height=300,
-                            )
-                            st.plotly_chart(fig_prob, width="stretch")
-
-                        with col2:
-                            st.subheader(" Recent Events")
-                            recent = df.tail(50)[
-                                ["timestamp", "probability"]
-                            ].copy()  # Show more events
-                            recent["Risk Level"] = recent["probability"].apply(
-                                lambda x: (
-                                    " Critical"
-                                    if x >= alert_threshold
-                                    else " Medium" if x >= 0.3 else " Low"
-                                )
-                            )
-                            recent["Time"] = recent["timestamp"].dt.strftime("%H:%M:%S")
-                            recent["Probability"] = recent["probability"].apply(
-                                lambda x: f"{x:.1%}"
-                            )
-
-                            # Use dataframe with height parameter for scrolling
-                            st.dataframe(
-                                recent[["Time", "Probability", "Risk Level"]],
-                                width="stretch",
-                                height=300,
-                            )
+                _render_live_metrics(data, result, probability, alert_threshold)
+                _render_live_analytics(alert_threshold)
 
             import time
-
             time.sleep(stream_interval)
 
     # Show static metrics when streaming is stopped
     else:
-        # Key metrics
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric(" Total Readings", st.session_state.live_total_count)
-        col2.metric(" Failures", st.session_state.live_failure_count)
-
-        if st.session_state.live_total_count > 0:
-            failure_rate = (
-                st.session_state.live_failure_count / st.session_state.live_total_count
-            ) * 100
-            col3.metric(" Failure Rate", f"{failure_rate:.1f}%")
-        else:
-            col3.metric(" Failure Rate", "0.0%")
-
-        if st.session_state.live_predictions:
-            latest_entry = st.session_state.live_predictions[-1]
-            if "probability" in latest_entry:
-                latest_prob = latest_entry["probability"]
-                col4.metric(" Current Risk", f"{latest_prob:.1%}")
-            else:
-                col4.metric(" Current Risk", "N/A")
-        else:
-            col4.metric(" Current Risk", "0.0%")
-
+        _render_static_metrics(alert_threshold)
+        
         # Show analytics when streaming is stopped (static view)
         if st.session_state.live_predictions:
             # Filter out any entries without required keys
@@ -523,7 +545,6 @@ def render_manual_input_page(alert_threshold):
 # Prediction result card
 # ─────────────────────────────────────────────────────────────────────────────
 def render_prediction_result(prediction, alert_threshold):
-    import pandas as pd
     import plotly.graph_objects as go
 
     # Validate prediction has required keys

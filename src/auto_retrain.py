@@ -2,8 +2,6 @@ import json
 import os
 from datetime import datetime, timedelta
 
-import joblib
-import numpy as np
 import pandas as pd
 
 from src.preprocessing import preprocess
@@ -76,18 +74,15 @@ class AutoRetrainer:
         # Check if it's been more than 7 days since last retraining
         if len(self.metrics_data) > 0:
             last_retrain = datetime.fromisoformat(self.metrics_data[-1]["timestamp"])
-            if datetime.now() - last_retrain > timedelta(days=7):
-                return True, "Scheduled weekly retraining"
+            if datetime.now() - last_retrain > timedelta(days=14):
+                return True, "Scheduled bi-weekly retraining"
 
         return False, "No retraining needed"
 
-    def create_training_dataset(self):
+    def _create_training_dataset(self):
         """Create training dataset from logged predictions"""
         if len(self.prediction_data) < 50:
             return None, None
-
-        # Convert to DataFrame
-        df = pd.DataFrame(self.prediction_data)
 
         # Create feature matrix with proper column names
         feature_names = [
