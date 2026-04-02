@@ -8,8 +8,11 @@ from src.preprocessing import preprocess
 @pytest.mark.unit
 def test_preprocess_basic():
     """Test basic preprocessing functionality"""
-    # Create sample data
+    # Create sample data with all expected columns
     data = {
+        "UDI": [1, 2, 3],
+        "Product ID": ["M00001", "M00002", "M00003"],
+        "Type": ["M", "L", "H"],
         "Air temperature [K]": [298.5, 300.2, 305.1],
         "Process temperature [K]": [308.5, 310.2, 315.1],
         "Rotational speed [rpm]": [1500, 1800, 2000],
@@ -61,6 +64,9 @@ def test_preprocess_missing_columns():
 def test_preprocess_single_sample():
     """Test preprocessing with single sample"""
     data = {
+        "UDI": [1],
+        "Product ID": ["M00001"],
+        "Type": ["M"],
         "Air temperature [K]": [298.5],
         "Process temperature [K]": [308.5],
         "Rotational speed [rpm]": [1500],
@@ -79,11 +85,14 @@ def test_preprocess_single_sample():
 @pytest.mark.integration
 def test_preprocess_real_data_structure():
     """Test preprocessing with data structure similar to real dataset"""
-    # Simulate real data structure
+    # Simulate real data structure with all expected columns
     np.random.seed(42)
     n_samples = 100
 
     data = {
+        "UDI": range(1, n_samples + 1),
+        "Product ID": [f"M{i:05d}" for i in range(1, n_samples + 1)],
+        "Type": np.random.choice(['M', 'L', 'H'], n_samples),
         "Air temperature [K]": np.random.normal(300, 2, n_samples),
         "Process temperature [K]": np.random.normal(310, 3, n_samples),
         "Rotational speed [rpm]": np.random.normal(1500, 100, n_samples),

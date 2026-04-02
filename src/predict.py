@@ -12,8 +12,20 @@ model_dir = os.path.join(
 model_path = os.path.join(model_dir, "model.pkl")
 scaler_path = os.path.join(model_dir, "scaler.pkl")
 
-model = joblib.load(model_path)
-scaler = joblib.load(scaler_path)
+# Global variables for model and scaler (will be loaded on first use)
+model = None
+scaler = None
+
+def _load_model():
+    """Load model and scaler if not already loaded"""
+    global model, scaler
+    if model is None or scaler is None:
+        # Check if model files exist before loading
+        if not os.path.exists(model_path) or not os.path.exists(scaler_path):
+            raise FileNotFoundError(f"Model files not found. Please ensure {model_path} and {scaler_path} exist.")
+        
+        model = joblib.load(model_path)
+        scaler = joblib.load(scaler_path)
 
 # Feature names for explainability
 feature_names = [
@@ -24,28 +36,42 @@ feature_names = [
     "Tool wear [min]",
 ]
 
-# Initialize SHAP explainer (only once)
-explainer = shap.Explainer(
-    model, pd.DataFrame([[300, 310, 1500, 40, 50]], columns=feature_names)
-)
+# Initialize SHAP explainer (will be created when model is loaded)
+explainer = None
+
+def _get_explainer():
+    """Get SHAP explainer, creating it if necessary"""
+    global explainer
+    if explainer is None:
+        # Create a dummy dataset for explainer initialization
+        dummy_data = pd.DataFrame([[300, 310, 1500, 40, 50]], columns=feature_names)
+        explainer = shap.Explainer(model, dummy_data)
+    return explainer
 
 
 def predict(data):
+    # Load model if not already loaded
+    _load_model()
+    
     # Convert data to DataFrame with proper feature names
     data_df = pd.DataFrame([data], columns=feature_names)
     data_scaled = scaler.transform(data_df)
     result = model.predict(data_scaled)[0]
-    probability = model.predict_proba(data_scaled)[0][1]  # Probability of failure
-    return result, probability
+    probability = float(model.predict_proba(data_scaled)[0][1])  # Probability of failure
+    return int(result), probability
 
 
 def explain_prediction(data):
     """Explain which features contributed to the prediction"""
+    # Load model if not already loaded
+    _load_model()
+    
     # Convert data to DataFrame with proper feature names
     data_df = pd.DataFrame([data], columns=feature_names)
     data_scaled = scaler.transform(data_df)
 
     # Get SHAP values
+    explainer = _get_explainer()
     shap_values = explainer(data_scaled)
 
     # Create feature importance dictionary
