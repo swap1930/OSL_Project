@@ -8,6 +8,7 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.auto_retrain import log_prediction
 from src.predict import generate_realistic_data, predict
+from src.huggingface_explanation import generate_ai_explanation
 
 
 def cleanup_session_state():
@@ -515,6 +516,21 @@ def render_manual_input_page(alert_threshold):
 
         # Validate prediction results before adding to session state
         if result is not None and probability is not None:
+            # Generate AI explanation
+            feature_names = [
+                "Air temperature [K]",
+                "Process temperature [K]", 
+                "Rotational speed [rpm]",
+                "Torque [Nm]",
+                "Tool wear [min]"
+            ]
+            ai_explanation = generate_ai_explanation(
+                prediction_result=result,
+                probability=probability,
+                input_data=data,
+                feature_names=feature_names
+            )
+            
             entry = {
                 "timestamp": timestamp,
                 "result": result,
@@ -527,6 +543,7 @@ def render_manual_input_page(alert_threshold):
                     "torque": torque,
                     "wear": wear,
                 },
+                "ai_explanation": ai_explanation,
             }
             st.session_state.manual_predictions.append(entry)
             st.session_state.manual_history.append(entry)
@@ -616,6 +633,33 @@ def render_prediction_result(prediction, alert_threshold):
         st.write(f" RPM: {p['rpm']:.0f}")
         st.write(f" Torque: {p['torque']:.1f}Nm")
         st.write(f" Wear: {p['wear']:.1f}min")
+    
+    # AI Explanation Section
+    if "ai_explanation" in prediction:
+        st.markdown("---")
+        st.subheader(" AI-Powered Analysis")
+        
+        ai_exp = prediction["ai_explanation"]
+        
+        # Create expandable sections for AI analysis
+        with st.expander(" Risk Assessment", expanded=True):
+            st.write(ai_exp.get("risk_assessment", "Analysis not available"))
+        
+        col_a1, col_a2 = st.columns(2)
+        with col_a1:
+            with st.expander(" Key Risk Factors"):
+                st.write(ai_exp.get("key_factors", "Analysis not available"))
+            with st.expander(" Immediate Actions"):
+                st.write(ai_exp.get("immediate_actions", "No immediate actions required"))
+        
+        with col_a2:
+            with st.expander(" Preventive Measures"):
+                st.write(ai_exp.get("preventive_measures", "No specific preventive measures"))
+            with st.expander(" Monitoring Recommendations"):
+                st.write(ai_exp.get("monitoring", "Standard monitoring recommended"))
+        
+        with st.expander(" Maintenance Suggestions"):
+            st.write(ai_exp.get("maintenance", "Regular maintenance recommended"))
 
 
 def get_risk_level(probability):
