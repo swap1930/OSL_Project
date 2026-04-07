@@ -6,11 +6,21 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize Hugging Face client
-client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=os.getenv("OPENAI_API_KEY") or os.getenv("HUGGINGFACE_API_KEY")
-)
+# Initialize Hugging Face client with error handling
+api_key = os.getenv("OPENAI_API_KEY") or os.getenv("HUGGINGFACE_API_KEY")
+client = None
+
+if api_key:
+    try:
+        client = OpenAI(
+            base_url="https://router.huggingface.co/v1",
+            api_key=api_key
+        )
+    except Exception as e:
+        print(f"Failed to initialize AI client: {e}")
+        client = None
+else:
+    print("Warning: No API key found for AI explanations. Using fallback responses.")
 
 def generate_ai_explanation(
     prediction_result: int,
@@ -76,6 +86,10 @@ def generate_ai_explanation(
     """
 
     try:
+        # Check if AI client is available
+        if not client:
+            raise Exception("AI client not initialized")
+            
         # Call Hugging Face model
         response = client.chat.completions.create(
             model="mistralai/Mistral-7B-Instruct-v0.2:featherless-ai",
